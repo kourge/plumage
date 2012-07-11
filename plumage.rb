@@ -81,7 +81,7 @@ class TerminalColorSettings
   end
 
   def self.detect(dict)
-    return :iterm if dict?["Ansi 0 Color"]
+    return :iterm2 if dict?["Ansi 0 Color"]
     return :terminalapp if dict["type"] == "Window Settings"
     nil
   end
@@ -162,7 +162,7 @@ class TerminalColorSettings
 
 
   ConverterMap = {
-    :iterm => ITermConverter,
+    :iterm2 => ITermConverter,
     :terminalapp => TerminalAppConverter
   }
 end
