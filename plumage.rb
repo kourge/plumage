@@ -136,26 +136,31 @@ class TerminalColorSettings
 
   module ITermConverter
     def self.from(dict)
-      Hash[dict.map { |k, v|
+      result = {}
+      dict.each do |k, v|
         v = NSColor.colorWithCalibratedRed(v["Red Component"],
           :green => v["Green Component"], :blue => v["Blue Component"],
           :alpha => 1.0
         ) if k.end_with?("Color")
         k = ITermToTerminalMap[k] if ITermToTerminalMap.keys.include?(k)
-        [k, v]
-      }]
+        result[k] = v
+      end
+      result
     end
 
     def self.to(dict)
-      Hash[dict.map { |k, v|
+      result = {}
+      dict.each do |k, v|
         if TerminalToITermMap.keys.include?(k)
-          [TerminalToITermMap[k], {
+          k = TerminalToITermMap[k]
+          result[k] = {
             "Red Component" => v.redComponent,
             "Green Component" => v.greenComponent,
             "Blue Component" => v.blueComponent
-          }]
-        else [] end
-      }]
+          }
+        end
+      end
+      result
     end
 
     ITermToTerminalMap = {
