@@ -25,8 +25,8 @@ end
 begin
   opts_parser.parse!
 rescue OptionParser::InvalidOption => ex
-  Kernel.warn(ex.message)
-  Kernel.warn(opts_parser.help)
+  warn ex.message
+  warn opts_parser.help
   exit
 end
 
@@ -34,7 +34,7 @@ in_file, out_file = ARGV[0], ARGV[1]
 
 in_dict = NSDictionary.dictionaryWithContentsOfFile(in_file)
 options[:if] ||= TerminalColorSettings.detect(in_dict)
-Kernel.warn("Couldn't detect input file format") or exit if options[:if].nil?
+warn "Couldn't detect input file format" or exit if options[:if].nil?
 
 input = TerminalColorSettings.new(in_dict, options[:if])
 
@@ -66,8 +66,11 @@ module Env
   ]
 
   def self.find_macruby
-    MACRUBY_CANDIDATES.each do |path| return path if File.exist?(path) end
-    (last_resort = `which macruby`).empty? ? nil : last_resort
+    MACRUBY_CANDIDATES.each do |path|
+      return path if File.exist?(path)
+    end
+    last_resort = `which macruby`
+    last_resort.empty? ? nil : last_resort
   end
 
   def self.macruby?
@@ -86,6 +89,7 @@ module Env
 end
 
 Env.relaunch_in_macruby!
+
 
 
 class NSPropertyListSerialization
@@ -110,6 +114,7 @@ class NSPropertyListSerialization
 end
 
 
+
 class TerminalColorSettings
   attr_reader :dict
 
@@ -131,8 +136,10 @@ class TerminalColorSettings
     nil
   end
 
+
   class InvalidFormatError < ArgumentError
   end
+
 
   module TerminalAppConverter
     def self.from(dict)
@@ -146,6 +153,7 @@ class TerminalColorSettings
 
     TerminalDefaultSettings = {"type" => "Window Settings"}
   end
+
 
   module ITermConverter
     def self.from(dict)
@@ -202,6 +210,7 @@ class TerminalColorSettings
     TerminalToITermMap = ITermToTerminalMap.invert
   end
 
+
   ConverterMap = {
     :iterm => ITermConverter,
     :terminalapp => TerminalAppConverter
@@ -224,6 +233,8 @@ class TerminalColorSettings
     mapping
   end
 end
+
+
 
 class Float
   def =~(other, epsilon=EPSILON) (self - other).abs <= epsilon end
