@@ -3,92 +3,42 @@
 framework 'AppKit'
 require 'optparse'
 
-ARGV << '--help' if ARGV.empty?
-options = {}
-opts_parser = OptionParser.new do |opts|
-  SCRIPT_NAME = File.split(__FILE__).last
-  opts.banner = "Usage: #{SCRIPT_NAME} [options] infile [outfile]"
+def main
+  ARGV << '--help' if ARGV.empty?
+  options = {}
+  opts_parser = OptionParser.new do |opts|
+    script_name = File.split(__FILE__).last
+    opts.banner = "Usage: #{script_name} [options] infile [outfile]"
 
-  formats = TerminalColorSettings::ConverterMap.keys
-  formats_list = "  (#{formats.join(',')})"
+    formats = TerminalColorSettings::ConverterMap.keys
+    formats_list = "  (#{formats.join(',')})"
 
-  opts.on('-if', '--input-format=FORMAT', formats,
-          'Specify the input format', formats_list) do |inf|
-    options[:if] = inf
-  end
-  opts.on('-of', '--output-format=FORMAT', formats,
-          'Specify the output format', formats_list) do |of|
-    options[:of] = of
-  end
-end
-
-begin
-  opts_parser.parse!
-rescue OptionParser::InvalidOption => ex
-  warn ex.message
-  warn opts_parser.help
-  exit
-end
-
-in_file, out_file = ARGV[0], ARGV[1]
-
-in_dict = NSDictionary.dictionaryWithContentsOfFile(in_file)
-options[:if] ||= TerminalColorSettings.detect(in_dict)
-warn "Couldn't detect input file format" or exit if options[:if].nil?
-
-input = TerminalColorSettings.new(in_dict, options[:if])
-
-=begin
-app = TerminalColorSettings.new(
-  "/Users/kourge/Desktop/Lexar/Desktop/Tomorrow\ Night.terminal",
-  :terminalapp
-)
-
-ite = TerminalColorSettings.new(
-  "/Users/kourge/Desktop/Lexar/Desktop/Tomorrow\ Night.itermcolors",
-  :iterm
-)
-
-p app.dict
-puts
-p app.to_dict(:terminalapp)
-puts
-p ite.to_dict(:terminalapp)
-
-=end
-
-BEGIN {
-
-module Env
-  MACRUBY_CANDIDATES = [
-    '/System/Library/PrivateFrameworks/MacRuby.framework/Versions/Current/usr/bin/macruby',
-    '/Library/Frameworks/MacRuby.framework/Versions/Current/usr/bin/macruby'
-  ]
-
-  def self.find_macruby
-    MACRUBY_CANDIDATES.each do |path|
-      return path if File.exist?(path)
+    opts.on('-if', '--input-format=FORMAT', formats,
+            'Specify the input format', formats_list) do |inf|
+      options[:if] = inf
     end
-    last_resort = `which macruby`
-    last_resort.empty? ? nil : last_resort
+    opts.on('-of', '--output-format=FORMAT', formats,
+            'Specify the output format', formats_list) do |of|
+      options[:of] = of
+    end
   end
 
-  def self.macruby?
-    return false unless Kernel.const_defined?(:RUBY_ENGINE)
-    Kernel.const_get(:RUBY_ENGINE) == 'macruby'
+  begin
+    opts_parser.parse!
+  rescue OptionParser::InvalidOption => e
+    warn e.message
+    warn opts_parser.help
+    exit
   end
 
-  def self.relaunch_in_macruby!(fatal=true)
-    return if self.macruby?
-    macruby = self.find_macruby
-    fail "Couldn't find MacRuby" if macruby.nil? and fatal
+  in_file, out_file = ARGV[0], ARGV[1]
 
-    args = [__FILE__] + ARGV
-    Kernel.exec(macruby, *args)
-  end
+  in_dict = NSDictionary.dictionaryWithContentsOfFile(in_file)
+  options[:if] ||= TerminalColorSettings.detect(in_dict)
+  warn "Couldn't detect input file format" or exit if options[:if].nil?
+
+  input = TerminalColorSettings.new(in_dict, options[:if])
 end
-
-Env.relaunch_in_macruby!
 
 
 
@@ -217,6 +167,47 @@ class TerminalColorSettings
   }
 end
 
+
+
+if __FILE__ == $0
+  main()
+end
+
+
+
+BEGIN {
+
+  module Env
+    MACRUBY_FRAMEWORK_BIN = 'MacRuby.framework/Versions/Current/usr/bin/macruby'
+    MACRUBY_CANDIDATES = [
+      "/System/Library/PrivateFrameworks/#{MACRUBY_FRAMEWORK_BIN}",
+      "/Library/Frameworks/#{MACRUBY_FRAMEWORK_BIN}"
+    ]
+
+    def self.find_macruby
+      MACRUBY_CANDIDATES.each do |path|
+        return path if File.exist?(path)
+      end
+      last_resort = `which macruby`
+      last_resort.empty? ? nil : last_resort
+    end
+
+    def self.macruby?
+      return false unless Kernel.const_defined?(:RUBY_ENGINE)
+      Kernel.const_get(:RUBY_ENGINE) == 'macruby'
+    end
+
+    def self.relaunch_in_macruby!(fatal=true)
+      return if self.macruby?
+      macruby = self.find_macruby
+      fail "Couldn't find MacRuby" if macruby.nil? and fatal
+
+      args = [__FILE__] + ARGV
+      Kernel.exec(macruby, *args)
+    end
+  end
+
+  Env.relaunch_in_macruby!
 
 }
 
