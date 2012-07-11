@@ -8,13 +8,15 @@ def main
   options = {}
   opts_parser = OptionParser.new do |opts|
     script_name = File.split(__FILE__).last
-    opts.banner = "Usage: #{script_name} [options] infile [outfile]"
+    opts.banner = "Usage: #{script_name} [options] infile [outfile]
+Omit outfile to default to stdout
+"
 
     formats = TerminalColorSettings::ConverterMap.keys
     formats_list = "  (#{formats.join(',')})"
 
     opts.on('-if', '--input-format=FORMAT', formats,
-            'Specify the input format', formats_list) do |inf|
+            'Specify the input format, omit to auto detect', formats_list) do |inf|
       options[:if] = inf
     end
     opts.on('-of', '--output-format=FORMAT', formats,
@@ -36,8 +38,32 @@ def main
   in_dict = NSDictionary.dictionaryWithContentsOfFile(in_file)
   options[:if] ||= TerminalColorSettings.detect(in_dict)
   warn "Couldn't detect input file format" or exit if options[:if].nil?
+  warn 'No output file format specified' or exit if options[:of].nil?
+
+  if out_file
+    out_file = NSFileHandle.fileHandleForWritingAtPath(out_file)
+  else
+    out_file = NSFileHandle.fileHandleWithStandardOutput
+  end
 
   input = TerminalColorSettings.new(in_dict, options[:if])
+  output = input.to_dict(options[:of])
+  error = Pointer.new(:id)
+
+  data = NSPropertyListSerialization.dataWithPropertyList(
+    output,
+    :format => NSPropertyListXMLFormat_v1_0,
+    :options => 0,
+    :error => error
+  )
+
+  if error[0]
+    warn error[0].localizedDescription
+    out_file.closeFile
+    exit
+  end
+
+  out_file.writeData(data)
 end
 
 
@@ -81,7 +107,8 @@ class TerminalColorSettings
   end
 
   def self.detect(dict)
-    return :iterm2 if dict?["Ansi 0 Color"]
+    return nil if dict.nil?
+    return :iterm2 if dict["Ansi 0 Color"]
     return :terminalapp if dict["type"] == "Window Settings"
     nil
   end
@@ -93,12 +120,14 @@ class TerminalColorSettings
 
   module TerminalAppConverter
     def self.from(dict)
-      Hash[dict.map { |k, v| [k, NSPropertyListSerialization.unarchive(v)] }]
+      result = dict.dup
+      result.each { |k, v| result[k] = NSPropertyListSerialization.unarchive(v) }
     end
 
     def self.to(dict)
-      h = Hash[dict.map { |k, v| [k, NSPropertyListSerialization.archive(v)] }]
-      TerminalDefaultSettings.merge(h)
+      result = dict.dup
+      result.each { |k, v| result[k] = NSPropertyListSerialization.archive(v) }
+      TerminalDefaultSettings.merge(result)
     end
 
     TerminalDefaultSettings = {"type" => "Window Settings"}
