@@ -215,30 +215,8 @@ class TerminalColorSettings
     :iterm => ITermConverter,
     :terminalapp => TerminalAppConverter
   }
-
-  def self.match_sets(set1, set2)
-    mapping = {}
-    set1.keys.select { |k| k =~ /^ANSI/ }.each do |k1|
-      c1 = set1[k1]
-      r, g, b = c1.redComponent, c1.greenComponent, c1.blueComponent
-      r, g, b = [r, g, b].map { |n| n.round(2) }
-      set2.keys.select { |k| k =~ /^Ansi/ }.each do |k2|
-        c2 = set2[k2]
-        x, y, z = c2.redComponent, c2.greenComponent, c2.blueComponent
-        x, y, z = [x, y, z].map { |n| n.round(2) }
-
-        mapping[k2] = k1 if r =~ x and g =~ y and b =~ z
-      end
-    end
-    mapping
-  end
 end
 
-
-
-class Float
-  def =~(other, epsilon=EPSILON) (self - other).abs <= epsilon end
-end
 
 }
 
