@@ -35,35 +35,18 @@ Omit outfile to default to stdout
 
   in_file, out_file = ARGV[0], ARGV[1]
 
-  in_dict = NSDictionary.dictionaryWithContentsOfFile(in_file)
+  in_dict = Kernel.load_plist(File.read(in_file))
   options[:if] ||= TerminalColorSettings.detect(in_dict)
   warn "Couldn't detect input file format" or exit if options[:if].nil?
   warn 'No output file format specified' or exit if options[:of].nil?
 
-  if out_file
-    out_file = NSFileHandle.fileHandleForWritingAtPath(out_file)
-  else
-    out_file = NSFileHandle.fileHandleWithStandardOutput
-  end
+  out_file = out_file.nil? ? STDOUT : File.open(out_file, 'w')
 
   input = TerminalColorSettings.new(in_dict, options[:if])
   output = input.to_dict(options[:of])
-  error = Pointer.new(:id)
 
-  data = NSPropertyListSerialization.dataWithPropertyList(
-    output,
-    :format => NSPropertyListXMLFormat_v1_0,
-    :options => 0,
-    :error => error
-  )
-
-  if error[0]
-    warn error[0].localizedDescription
-    out_file.closeFile
-    exit
-  end
-
-  out_file.writeData(data)
+  out_file.write(output.to_plist)
+  out_file.close
 end
 
 
