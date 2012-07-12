@@ -35,35 +35,18 @@ Omit outfile to default to stdout
 
   in_file, out_file = ARGV[0], ARGV[1]
 
-  in_dict = NSDictionary.dictionaryWithContentsOfFile(in_file)
+  in_dict = Kernel.load_plist(File.read(in_file))
   options[:if] ||= TerminalColorSettings.detect(in_dict)
-  warn "Couldn't detect input file format" or exit if options[:if].nil?
+  warn 'Could not detect input file format' or exit if options[:if].nil?
   warn 'No output file format specified' or exit if options[:of].nil?
 
-  if out_file
-    out_file = NSFileHandle.fileHandleForWritingAtPath(out_file)
-  else
-    out_file = NSFileHandle.fileHandleWithStandardOutput
-  end
+  out_file = out_file.nil? ? STDOUT : File.open(out_file, 'w')
 
   input = TerminalColorSettings.new(in_dict, options[:if])
   output = input.to_dict(options[:of])
-  error = Pointer.new(:id)
 
-  data = NSPropertyListSerialization.dataWithPropertyList(
-    output,
-    :format => NSPropertyListXMLFormat_v1_0,
-    :options => 0,
-    :error => error
-  )
-
-  if error[0]
-    warn error[0].localizedDescription
-    out_file.closeFile
-    exit
-  end
-
-  out_file.writeData(data)
+  out_file.write(output.to_plist)
+  out_file.close
 end
 
 
@@ -108,8 +91,8 @@ class TerminalColorSettings
 
   def self.detect(dict)
     return nil if dict.nil?
-    return :iterm2 if dict["Ansi 0 Color"]
-    return :terminalapp if dict["type"] == "Window Settings"
+    return :iterm2 if dict['Ansi 0 Color']
+    return :terminalapp if dict['type'] == 'Window Settings'
     nil
   end
 
@@ -130,7 +113,7 @@ class TerminalColorSettings
       TerminalDefaultSettings.merge(result)
     end
 
-    TerminalDefaultSettings = {"type" => "Window Settings"}
+    TerminalDefaultSettings = {'type' => 'Window Settings'}
   end
 
 
@@ -138,10 +121,10 @@ class TerminalColorSettings
     def self.from(dict)
       result = {}
       dict.each do |k, v|
-        v = NSColor.colorWithCalibratedRed(v["Red Component"],
-          :green => v["Green Component"], :blue => v["Blue Component"],
+        v = NSColor.colorWithCalibratedRed(v['Red Component'],
+          :green => v['Green Component'], :blue => v['Blue Component'],
           :alpha => 1.0
-        ) if k.end_with?("Color")
+        ) if k.end_with?('Color')
         k = ITermToTerminalMap[k] if ITermToTerminalMap.keys.include?(k)
         result[k] = v
       end
@@ -154,9 +137,9 @@ class TerminalColorSettings
         if TerminalToITermMap.keys.include?(k)
           k = TerminalToITermMap[k]
           result[k] = {
-            "Red Component" => v.redComponent,
-            "Green Component" => v.greenComponent,
-            "Blue Component" => v.blueComponent
+            'Red Component' => v.redComponent,
+            'Green Component' => v.greenComponent,
+            'Blue Component' => v.blueComponent
           }
         end
       end
@@ -164,31 +147,31 @@ class TerminalColorSettings
     end
 
     ITermToTerminalMap = {
-      "Ansi 0 Color" => "ANSIBlackColor",
-      "Ansi 1 Color" => "ANSIRedColor",
-      "Ansi 2 Color" => "ANSIGreenColor",
-      "Ansi 3 Color" => "ANSIYellowColor",
-      "Ansi 4 Color" => "ANSIBlueColor",
-      "Ansi 5 Color" => "ANSIMagentaColor",
-      "Ansi 6 Color" => "ANSICyanColor",
-      "Ansi 7 Color" => "ANSIWhiteColor",
+      'Ansi 0 Color' => 'ANSIBlackColor',
+      'Ansi 1 Color' => 'ANSIRedColor',
+      'Ansi 2 Color' => 'ANSIGreenColor',
+      'Ansi 3 Color' => 'ANSIYellowColor',
+      'Ansi 4 Color' => 'ANSIBlueColor',
+      'Ansi 5 Color' => 'ANSIMagentaColor',
+      'Ansi 6 Color' => 'ANSICyanColor',
+      'Ansi 7 Color' => 'ANSIWhiteColor',
 
-      "Ansi 8 Color" => "ANSIBrightBlackColor",
-      "Ansi 9 Color" => "ANSIBrightRedColor",
-      "Ansi 10 Color" => "ANSIBrightGreenColor",
-      "Ansi 11 Color" => "ANSIBrightYellowColor",
-      "Ansi 12 Color" => "ANSIBrightBlueColor",
-      "Ansi 13 Color" => "ANSIBrightMagentaColor",
-      "Ansi 14 Color" => "ANSIBrightCyanColor",
-      "Ansi 15 Color" => "ANSIBrightWhiteColor",
+      'Ansi 8 Color' => 'ANSIBrightBlackColor',
+      'Ansi 9 Color' => 'ANSIBrightRedColor',
+      'Ansi 10 Color' => 'ANSIBrightGreenColor',
+      'Ansi 11 Color' => 'ANSIBrightYellowColor',
+      'Ansi 12 Color' => 'ANSIBrightBlueColor',
+      'Ansi 13 Color' => 'ANSIBrightMagentaColor',
+      'Ansi 14 Color' => 'ANSIBrightCyanColor',
+      'Ansi 15 Color' => 'ANSIBrightWhiteColor',
 
-      "Background Color" => "BackgroundColor",
-      "Bold Color" => "TextBoldColor",
-      "Cursor Color" => "CursorColor",
-      # "Cursor Text Color" => nil,
-      "Foreground Color" => "TextColor",
-      # "Selected Text Color" => nil,
-      "Selection Color" => "SelectionColor"
+      'Background Color' => 'BackgroundColor',
+      'Bold Color' => 'TextBoldColor',
+      'Cursor Color' => 'CursorColor',
+      # 'Cursor Text Color' => nil,
+      'Foreground Color' => 'TextColor',
+      # 'Selected Text Color' => nil,
+      'Selection Color' => 'SelectionColor'
     }
 
     TerminalToITermMap = ITermToTerminalMap.invert
@@ -234,7 +217,7 @@ BEGIN {
     def self.relaunch_in_macruby!(fatal=true)
       return if self.macruby?
       macruby = self.find_macruby
-      fail "Couldn't find MacRuby" if macruby.nil? and fatal
+      fail 'Could not find MacRuby' if macruby.nil? and fatal
 
       args = [__FILE__] + ARGV
       Kernel.exec(macruby, *args)
